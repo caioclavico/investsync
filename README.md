@@ -50,10 +50,10 @@ O InvestSync é composto por uma arquitetura modular com front-end em React, API
 - **Mensageria**: Apache Kafka para comunicação assíncrona de eventos.
 - **Persistência**: PostgreSQL para dados principais, Cassandra para logs/eventos históricos.
 
-## 📁 Estrutura do projeto
+## 📁 Estrutura do Projeto
 
+```txt
 /InvestSync
-│
 ├── /frontend                # React app
 │   ├── /public
 │   ├── /src
@@ -73,11 +73,9 @@ O InvestSync é composto por uma arquitetura modular com front-end em React, API
 │   └── InvestSync.csproj
 │
 ├── /migrations              # Scripts SQL ou CQL
-│
 ├── /docs                    # Documentações, diagramas
-│
 ├── /.github                 # Workflows CI/CD
-│
 ├── docker-compose.yml       # Ambientes com Kafka, DBs, etc.
 ├── README.md
 └── LICENSE
+```
