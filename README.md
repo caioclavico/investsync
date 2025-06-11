@@ -2,80 +2,33 @@
 
 Aplicativo para gestão de ordens de fundos com atualização em tempo real.
 
-## 🛠️ Tecnologias
-- C# (.NET 8) — API REST
-- React + TypeScript — Frontend
-- Material UI — Interface
-- Apache Kafka — Mensageria
-- Docker — Deploy local
-- GitHub Projects — Planejamento
+## 🛠 Tecnologias Utilizadas
 
-## 📆 Planejamento
-Veja [o Project Board](https://github.com/seu-usuario/investsync/projects) com o planejamento semanal.
+### Frontend
+- [React](https://reactjs.org/) com [TypeScript](https://www.typescriptlang.org/)
+- [Syncfusion React UI Components](https://www.syncfusion.com/react-components)
+- Vite (em breve)
+- Axios
 
-## Arquitetura do Projeto
-
-                       +---------------------+
-                       |     Front-end       |
-                       |  (React + MUI)      |
-                       +----------+----------+
-                                  |
-                                  v
-                     REST/GraphQL API (HTTPS)
-                                  |
-                     +------------+------------+
-                     |                         |
-          +----------v----------+   +----------v----------+
-          |    API Gateway /    |   |     Auth Service     |
-          |   Backend (C# ASP)  |   |   (JWT/OAuth2)       |
-          +----------+----------+   +----------+-----------+
-                     |                         |
-                     v                         v
-          +---------------+--------------------------------+
-          |          Application / Domain Layer            |
-          +----------------------+-------------------------+
-                                 |
-                  +--------------+-------------+
-                  |                            |
-           +------v------+             +-------v-------+
-           |   Kafka     |             | Persistence   |
-           | (Producer / |             | (PostgreSQL,  |
-           |  Consumer)  |             | Cassandra)    |
-           +-------------+             +---------------+
-
-O InvestSync é composto por uma arquitetura modular com front-end em React, API back-end em C#, mensageria com Kafka para eventos financeiros, e persistência de dados em PostgreSQL (relacional) e Cassandra (não relacional para eventos ou histórico).
-
-- **Front-end**: Interface do usuário com React e Material UI.
-- **Back-end**: ASP.NET Web API com autenticação JWT.
-- **Mensageria**: Apache Kafka para comunicação assíncrona de eventos.
-- **Persistência**: PostgreSQL para dados principais, Cassandra para logs/eventos históricos.
+### Backend
+- [.NET 8 (C#)](https://dotnet.microsoft.com/)
+- Apache Kafka (mensageria)
+- SQL Server e Cassandra (em breve)
 
 ## 📁 Estrutura do Projeto
 
-```txt
-/InvestSync
-├── /frontend                # React app
-│   ├── /public
-│   ├── /src
-│   │   ├── /components
-│   │   ├── /pages
-│   │   ├── /services        # chamadas à API
-│   │   └── /utils
+```bash
+investsync/
+├── frontend/             # Aplicação React (TS + Syncfusion)
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   └── App.tsx
 │   └── package.json
-│
-├── /backend                 # ASP.NET Web API
-│   ├── /Controllers
-│   ├── /Services
-│   ├── /Domain              # Lógica de negócio
-│   ├── /Infrastructure      # Kafka, DB, etc.
-│   ├── /DTOs
-│   ├── /Config
-│   └── InvestSync.csproj
-│
-├── /migrations              # Scripts SQL ou CQL
-├── /docs                    # Documentações, diagramas
-├── /.github                 # Workflows CI/CD
-├── docker-compose.yml       # Ambientes com Kafka, DBs, etc.
-├── README.md
-└── LICENSE
-```
+├── backend/              # APIs e serviços em .NET
+│   ├── InvestSync.Api/
+│   ├── InvestSync.Kafka/
+│   └── ...
+├── docker-compose.yml    # (em breve)
+└── README.md
