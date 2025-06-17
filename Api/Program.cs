@@ -1,10 +1,15 @@
 using Swashbuckle.AspNetCore.SwaggerGen;
+using Api.Services;
+using Api.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Adiciona serviços Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddControllers();
+builder.Services.AddScoped<IUserService, UserService>();
+
 
 var app = builder.Build();
 
@@ -18,6 +23,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.MapGet("/hello", () => "Hello World!");
+app.MapControllers();
 
 app.Run();
