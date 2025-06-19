@@ -1,14 +1,14 @@
 using Swashbuckle.AspNetCore.SwaggerGen;
-using Api.Services;
-using Api.Interfaces;
+using InvestSync.Api.src.Interfaces;
+using InvestSync.Api.src.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Adiciona serviços Swagger
+builder.Services.AddControllers();
+builder.Services.AddSingleton<IUserRepositories, InMemoryUserRepository>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddControllers();
-builder.Services.AddScoped<IUserService, UserService>();
 
 
 var app = builder.Build();
