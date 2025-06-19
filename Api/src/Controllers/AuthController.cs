@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using InvestSync.Api.src.DTOs;
 using InvestSync.Api.src.Models;
 using InvestSync.Api.src.Interfaces;
+using InvestSync.Api.src.Helpers;
+using System.Text;
 
 namespace InvestSync.Api.src.Controllers
 {
@@ -10,10 +12,14 @@ namespace InvestSync.Api.src.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IUserRepositories _userRepository;
+        private readonly string _jwtKey;
+        private readonly string _jwtIssuer;
 
         public AuthController(IUserRepositories userRepository)
         {
             _userRepository = userRepository;
+            _jwtKey = Environment.GetEnvironmentVariable("JWT_KEY") ?? "crie-uma-chave-secreta-forte-no-arquivo-env";
+            _jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "InvestSync";
         }
 
         [HttpPost("register")]
@@ -23,12 +29,11 @@ namespace InvestSync.Api.src.Controllers
             if (existing != null)
                 return Conflict("E-mail já cadastrado.");
 
-            // Simples hash para exemplo (não use em produção!)
             var user = new User
             {
                 Name = request.Name,
                 Email = request.Email,
-                PasswordHash = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(request.Password))
+                PasswordHash = Convert.ToBase64String(Encoding.UTF8.GetBytes(request.Password))
             };
 
             var created = await _userRepository.CreateAsync(user);
@@ -42,21 +47,27 @@ namespace InvestSync.Api.src.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult<UserResponse>> Login(UserLoginRequest request)
+        public async Task<ActionResult<UserLoginResponse>> Login(UserLoginRequest request)
         {
             var user = await _userRepository.GetByEmailAsync(request.Email);
             if (user == null)
                 return Unauthorized("Usuário ou senha inválidos.");
 
-            var passwordHash = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(request.Password));
+            var passwordHash = Convert.ToBase64String(Encoding.UTF8.GetBytes(request.Password));
             if (user.PasswordHash != passwordHash)
                 return Unauthorized("Usuário ou senha inválidos.");
 
-            return Ok(new UserResponse
+            var token = JwtHelper.GenerateJwtToken(user, _jwtKey, _jwtIssuer);
+
+            return Ok(new UserLoginResponse
             {
-                Id = user.Id,
-                Name = user.Name,
-                Email = user.Email
+                Token = token,
+                User = new UserResponse
+                {
+                    Id = user.Id,
+                    Name = user.Name,
+                    Email = user.Email
+                }
             });
         }
     }
