@@ -4,7 +4,7 @@ using InvestSync.Api.src.Interfaces;
 
 namespace InvestSync.Api.src.Repositories
 {
-    public class InMemoryUserRepository : IUserRepositories
+    public class InMemoryUserRepository : IUserRepository
     {
         private static readonly ConcurrentDictionary<string, User> _users = new();
 

@@ -11,11 +11,11 @@ namespace InvestSync.Api.src.Controllers
     [Route("auth")]
     public class AuthController : ControllerBase
     {
-        private readonly IUserRepositories _userRepository;
+        private readonly IUserRepository _userRepository;
         private readonly string _jwtKey;
         private readonly string _jwtIssuer;
 
-        public AuthController(IUserRepositories userRepository)
+        public AuthController(IUserRepository userRepository)
         {
             _userRepository = userRepository;
             _jwtKey = Environment.GetEnvironmentVariable("JWT_KEY") ?? "crie-uma-chave-secreta-forte-no-arquivo-env";

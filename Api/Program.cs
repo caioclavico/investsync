@@ -2,6 +2,7 @@
 using InvestSync.Api.src.Interfaces;
 using InvestSync.Api.src.Repositories;
 using InvestSync.Api.src.Extensions;
+using InvestSync.Api.src.BO;
 
 // Carrega variáveis do .env
 DotNetEnv.Env.Load();
@@ -13,10 +14,12 @@ var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY") ?? "chave-padrao";
 var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "InvestSync";
 
 builder.Services.AddControllers();
-builder.Services.AddSingleton<IUserRepositories, InMemoryUserRepository>();
+builder.Services.AddScoped<TransactionBO>();
+builder.Services.AddSingleton<IUserRepository, InMemoryUserRepository>();
+builder.Services.AddSingleton<ITransactionRepository, InMemoryTransactionRepository>();
 builder.Services.AddJwtAuthentication(jwtKey, jwtIssuer);
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerWithJwt();
 
 var app = builder.Build();
 
