@@ -2,6 +2,8 @@ using Confluent.Kafka;
 using System.Text.Json;
 using Shared.Events;
 
+namespace InvestSync.Worker;
+
 public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;

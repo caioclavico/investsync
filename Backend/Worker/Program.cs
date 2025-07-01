@@ -1,3 +1,5 @@
+using InvestSync.Worker;
+
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddHostedService<FinnhubWorker>();
 // builder.Services.AddHostedService<Worker>();
