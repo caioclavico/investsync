@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Confluent.Kafka;
-using System.Text.Json;
-using Shared.Events;
 using InvestSync.Api.src.DTOs;
 using InvestSync.Api.src.Utils;
 
@@ -101,98 +99,6 @@ namespace InvestSync.Api.src.Controllers
             {
                 _logger.LogError(ex, "❌ Erro ao processar dessubscrição para ativo {Ativo}", ativo);
                 return StatusCode(500, ApiResponse<object>.CreateError($"Erro interno do servidor: {ex.Message}"));
-            }
-        }
-
-        [HttpGet("test-kafka")]
-        [AllowAnonymous]
-        public async Task<IActionResult> TestKafka()
-        {
-            _logger.LogInformation("🧪 Testando conexão com Kafka...");
-
-            try
-            {
-                var config = new ProducerConfig
-                {
-                    BootstrapServers = "localhost:9092",
-                    MessageTimeoutMs = 5000,
-                    RequestTimeoutMs = 5000
-                };
-
-                using var producer = new ProducerBuilder<string, string>(config).Build();
-
-                // Enviar um evento válido de teste em vez de string simples
-                var testEvent = new AtivoSubscricaoEvent
-                {
-                    Ativo = "TEST",
-                    Acao = "test",
-                    Timestamp = DateTime.UtcNow
-                };
-
-                var testJson = JsonSerializer.Serialize(testEvent);
-                _logger.LogInformation("📤 Enviando evento de teste: {TestJson}", testJson);
-
-                var testMessage = new Message<string, string>
-                {
-                    Key = "test",
-                    Value = testJson
-                };
-
-                var result = await producer.ProduceAsync("ativos.subscricao", testMessage);
-
-                _logger.LogInformation("✅ Teste Kafka bem-sucedido - Partition: {Partition}, Offset: {Offset}",
-                    result.Partition.Value, result.Offset.Value);
-
-                return Ok(ApiResponse<object>.CreateSuccess(
-                    new { status = "ok", partition = result.Partition.Value, offset = result.Offset.Value, eventSent = testEvent },
-                    "Conexão com Kafka OK"
-                ));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ Erro ao testar Kafka");
-                return StatusCode(500, ApiResponse<object>.CreateError($"Erro na conexão com Kafka: {ex.Message}"));
-            }
-        }
-
-        [HttpGet("test-kafka-simple")]
-        [AllowAnonymous]
-        public async Task<IActionResult> TestKafkaSimple()
-        {
-            _logger.LogInformation("🧪 Testando conectividade simples com Kafka...");
-
-            try
-            {
-                var config = new ProducerConfig
-                {
-                    BootstrapServers = "localhost:9092",
-                    MessageTimeoutMs = 5000,
-                    RequestTimeoutMs = 5000
-                };
-
-                using var producer = new ProducerBuilder<string, string>(config).Build();
-
-                // Usar um tópico diferente para não interferir com o worker
-                var testMessage = new Message<string, string>
-                {
-                    Key = "connectivity-test",
-                    Value = "simple-connection-test"
-                };
-
-                var result = await producer.ProduceAsync("test-connectivity", testMessage);
-
-                _logger.LogInformation("✅ Teste conectividade Kafka bem-sucedido - Partition: {Partition}, Offset: {Offset}",
-                    result.Partition.Value, result.Offset.Value);
-
-                return Ok(ApiResponse<object>.CreateSuccess(
-                    new { status = "connected", partition = result.Partition.Value, offset = result.Offset.Value },
-                    "Conectividade Kafka OK"
-                ));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ Erro ao testar conectividade Kafka");
-                return StatusCode(500, ApiResponse<object>.CreateError($"Erro na conectividade Kafka: {ex.Message}"));
             }
         }
     }
