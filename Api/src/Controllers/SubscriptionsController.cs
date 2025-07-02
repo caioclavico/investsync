@@ -4,6 +4,7 @@ using Confluent.Kafka;
 using System.Text.Json;
 using Shared.Events;
 using InvestSync.Api.src.DTOs;
+using InvestSync.Api.src.Utils;
 
 namespace InvestSync.Api.src.Controllers
 {
@@ -32,8 +33,21 @@ namespace InvestSync.Api.src.Controllers
                     return BadRequest(ApiResponse<object>.CreateError("Nome do ativo é obrigatório"));
                 }
 
-                _logger.LogInformation("📞 Chamando PublishSubscriptionEvent...");
-                await PublishSubscriptionEvent(ativo, "subscribe");
+                _logger.LogInformation("📞 Chamando PublishEvents.PublishSubscriptionEvent...");
+
+                var config = new ProducerConfig
+                {
+                    BootstrapServers = "localhost:9092",
+                    MessageTimeoutMs = 5000,
+                    RequestTimeoutMs = 5000,
+                    DeliveryReportFields = "all"
+                };
+
+                using var producer = new ProducerBuilder<string, string>(config).Build();
+                var result = await PublishEvents.PublishSubscriptionEvent(ativo, "subscribe", "ativos.subscricao", producer, _logger);
+
+                _logger.LogInformation("✅ Evento de subscrição enviado via PublishEvents para {Ativo} - Partition: {Partition}, Offset: {Offset}",
+                    ativo, result.Partition.Value, result.Offset.Value);
 
                 _logger.LogInformation("✅ Subscrição processada com sucesso para {Ativo}", ativo);
                 return Ok(ApiResponse<object>.CreateSuccess(
@@ -61,8 +75,21 @@ namespace InvestSync.Api.src.Controllers
                     return BadRequest(ApiResponse<object>.CreateError("Nome do ativo é obrigatório"));
                 }
 
-                _logger.LogInformation("📞 Chamando PublishSubscriptionEvent...");
-                await PublishSubscriptionEvent(ativo, "unsubscribe");
+                _logger.LogInformation("📞 Chamando PublishEvents.PublishSubscriptionEvent...");
+
+                var config = new ProducerConfig
+                {
+                    BootstrapServers = "localhost:9092",
+                    MessageTimeoutMs = 5000,
+                    RequestTimeoutMs = 5000,
+                    DeliveryReportFields = "all"
+                };
+
+                using var producer = new ProducerBuilder<string, string>(config).Build();
+                var result = await PublishEvents.PublishSubscriptionEvent(ativo, "unsubscribe", "ativos.subscricao", producer, _logger);
+
+                _logger.LogInformation("✅ Evento de dessubscrição enviado via PublishEvents para {Ativo} - Partition: {Partition}, Offset: {Offset}",
+                    ativo, result.Partition.Value, result.Offset.Value);
 
                 _logger.LogInformation("✅ Dessubscrição processada com sucesso para {Ativo}", ativo);
                 return Ok(ApiResponse<object>.CreateSuccess(
@@ -94,10 +121,21 @@ namespace InvestSync.Api.src.Controllers
 
                 using var producer = new ProducerBuilder<string, string>(config).Build();
 
+                // Enviar um evento válido de teste em vez de string simples
+                var testEvent = new AtivoSubscricaoEvent
+                {
+                    Ativo = "TEST",
+                    Acao = "test",
+                    Timestamp = DateTime.UtcNow
+                };
+
+                var testJson = JsonSerializer.Serialize(testEvent);
+                _logger.LogInformation("📤 Enviando evento de teste: {TestJson}", testJson);
+
                 var testMessage = new Message<string, string>
                 {
                     Key = "test",
-                    Value = "test-connection"
+                    Value = testJson
                 };
 
                 var result = await producer.ProduceAsync("ativos.subscricao", testMessage);
@@ -106,7 +144,7 @@ namespace InvestSync.Api.src.Controllers
                     result.Partition.Value, result.Offset.Value);
 
                 return Ok(ApiResponse<object>.CreateSuccess(
-                    new { status = "ok", partition = result.Partition.Value, offset = result.Offset.Value },
+                    new { status = "ok", partition = result.Partition.Value, offset = result.Offset.Value, eventSent = testEvent },
                     "Conexão com Kafka OK"
                 ));
             }
@@ -117,55 +155,44 @@ namespace InvestSync.Api.src.Controllers
             }
         }
 
-        private async Task PublishSubscriptionEvent(string ativo, string acao)
+        [HttpGet("test-kafka-simple")]
+        [AllowAnonymous]
+        public async Task<IActionResult> TestKafkaSimple()
         {
+            _logger.LogInformation("🧪 Testando conectividade simples com Kafka...");
+
             try
             {
-                _logger.LogInformation("🚀 Iniciando PublishSubscriptionEvent - Ativo: {Ativo}, Ação: {Acao}", ativo, acao);
-
                 var config = new ProducerConfig
                 {
                     BootstrapServers = "localhost:9092",
                     MessageTimeoutMs = 5000,
-                    RequestTimeoutMs = 5000,
-                    DeliveryReportFields = "all"
+                    RequestTimeoutMs = 5000
                 };
 
-                _logger.LogInformation("📡 Criando producer Kafka...");
                 using var producer = new ProducerBuilder<string, string>(config).Build();
 
-                var evento = new AtivoSubscricaoEvent
+                // Usar um tópico diferente para não interferir com o worker
+                var testMessage = new Message<string, string>
                 {
-                    Ativo = ativo.ToUpper(),
-                    Acao = acao,
-                    Timestamp = DateTime.UtcNow
+                    Key = "connectivity-test",
+                    Value = "simple-connection-test"
                 };
 
-                var json = JsonSerializer.Serialize(evento);
-                _logger.LogInformation("📤 Evento serializado: {EventoJson}", json);
+                var result = await producer.ProduceAsync("test-connectivity", testMessage);
 
-                var message = new Message<string, string>
-                {
-                    Key = ativo,
-                    Value = json
-                };
+                _logger.LogInformation("✅ Teste conectividade Kafka bem-sucedido - Partition: {Partition}, Offset: {Offset}",
+                    result.Partition.Value, result.Offset.Value);
 
-                _logger.LogInformation("📨 Enviando mensagem para tópico 'ativos.subscricao'...");
-                var result = await producer.ProduceAsync("ativos.subscricao", message);
-
-                _logger.LogInformation("✅ Evento enviado com sucesso! Ativo: {Ativo}, Ação: {Acao}, Partition: {Partition}, Offset: {Offset}",
-                    ativo, acao, result.Partition.Value, result.Offset.Value);
-            }
-            catch (ProduceException<string, string> ex)
-            {
-                _logger.LogError(ex, "❌ Erro específico do Kafka Producer - Ativo: {Ativo}, Ação: {Acao}, Error Code: {ErrorCode}",
-                    ativo, acao, ex.Error.Code);
-                throw;
+                return Ok(ApiResponse<object>.CreateSuccess(
+                    new { status = "connected", partition = result.Partition.Value, offset = result.Offset.Value },
+                    "Conectividade Kafka OK"
+                ));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ Erro geral ao enviar evento - Ativo: {Ativo}, Ação: {Acao}", ativo, acao);
-                throw;
+                _logger.LogError(ex, "❌ Erro ao testar conectividade Kafka");
+                return StatusCode(500, ApiResponse<object>.CreateError($"Erro na conectividade Kafka: {ex.Message}"));
             }
         }
     }

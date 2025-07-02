@@ -7,20 +7,83 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
-namespace InvestSync.Worker;
+namespace InvestSync.FinnhubWorker;
 
 public class FinnhubWorker : BackgroundService
 {
     private readonly ILogger<FinnhubWorker> _logger;
     private WebsocketClient? _client;
     private readonly ConcurrentDictionary<string, bool> _ativosSubscritos = new();
+    private readonly bool _useMockData;
+    private readonly string[] _ativosMock = { "PETR4", "VALE3", "ITUB4" };
 
     public FinnhubWorker(ILogger<FinnhubWorker> logger)
     {
         _logger = logger;
+        // Configurar via environment variable ou configuration
+        _useMockData = Environment.GetEnvironmentVariable("USE_MOCK_DATA")?.ToLower() == "true";
+
+        if (_useMockData)
+        {
+            _logger.LogInformation("🎭 Worker iniciado em modo MOCK - dados sintéticos serão gerados");
+        }
+        else
+        {
+            _logger.LogInformation("🌐 Worker iniciado em modo REAL - conectando ao Finnhub");
+        }
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        if (_useMockData)
+        {
+            await ExecuteMockDataAsync(stoppingToken);
+        }
+        else
+        {
+            await ExecuteRealDataAsync(stoppingToken);
+        }
+    }
+
+    private async Task ExecuteMockDataAsync(CancellationToken stoppingToken)
+    {
+        _logger.LogInformation("🎭 Iniciando geração de dados mock...");
+
+        var config = new ProducerConfig
+        {
+            BootstrapServers = "localhost:9092"
+        };
+
+        using var producer = new ProducerBuilder<string, string>(config).Build();
+        var rand = new Random();
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            foreach (var ativo in _ativosMock)
+            {
+                var preco = new PrecoAtualizadoEvent
+                {
+                    Ativo = ativo,
+                    Preco = (decimal)Math.Round(10 + rand.NextDouble() * 90, 2),
+                    Timestamp = DateTime.UtcNow
+                };
+
+                var json = JsonSerializer.Serialize(preco);
+
+                await producer.ProduceAsync("precos.atualizados", new Message<string, string>
+                {
+                    Key = ativo,
+                    Value = json
+                });
+
+                Console.WriteLine($"🟢 Mock enviado: {ativo} - {preco.Preco}");
+
+                await Task.Delay(2000, stoppingToken);
+            }
+        }
+    }
+
+    private async Task ExecuteRealDataAsync(CancellationToken stoppingToken)
     {
         var finnhubToken = "d1ar231r01qjhvtqrm1gd1ar231r01qjhvtqrm20"; // coloque seu token válido aqui
 
@@ -37,8 +100,8 @@ public class FinnhubWorker : BackgroundService
         {
             GroupId = "finnhub-worker-group",
             BootstrapServers = "localhost:9092",
-            AutoOffsetReset = AutoOffsetReset.Earliest, // Mudei para ler desde o início
-            EnableAutoCommit = false, // Controle manual de commit
+            AutoOffsetReset = AutoOffsetReset.Earliest,
+            EnableAutoCommit = false,
             SessionTimeoutMs = 10000,
             MaxPollIntervalMs = 300000
         };
@@ -84,7 +147,6 @@ public class FinnhubWorker : BackgroundService
                     }
                     else
                     {
-                        // Log para mensagens não "trade" (útil para debug)
                         _logger.LogDebug($"Mensagem recebida do Finnhub: {msg.Text}");
                     }
                 }
@@ -115,19 +177,17 @@ public class FinnhubWorker : BackgroundService
             {
                 try
                 {
-                    var result = consumer.Consume(TimeSpan.FromMilliseconds(1000)); // Aumentei timeout para 1 segundo
+                    var result = consumer.Consume(TimeSpan.FromMilliseconds(1000));
                     if (result != null)
                     {
                         _logger.LogInformation($"📦 Mensagem recebida do Kafka: {result.Message.Value}");
                         await ProcessarEventoSubscricao(result.Message.Value);
 
-                        // Confirmar o processamento da mensagem
                         consumer.Commit(result);
                         _logger.LogDebug("✅ Mensagem confirmada no Kafka");
                     }
                     else
                     {
-                        // Log periódico para mostrar que está vivo
                         _logger.LogDebug("⏳ Aguardando mensagens no tópico 'ativos.subscricao'...");
                     }
                 }
@@ -177,14 +237,38 @@ public class FinnhubWorker : BackgroundService
         {
             _logger.LogInformation($"🔍 Processando evento JSON: {eventoJson}");
 
-            var evento = JsonSerializer.Deserialize<AtivoSubscricaoEvent>(eventoJson);
+            // Verificar se é uma mensagem válida antes de deserializar
+            if (string.IsNullOrWhiteSpace(eventoJson))
+            {
+                _logger.LogWarning("⚠️ Evento JSON está vazio ou nulo");
+                return;
+            }
+
+            AtivoSubscricaoEvent? evento;
+            try
+            {
+                evento = JsonSerializer.Deserialize<AtivoSubscricaoEvent>(eventoJson);
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "⚠️ Mensagem não é um AtivoSubscricaoEvent válido, ignorando: {EventoJson}", eventoJson);
+                return;
+            }
+
             if (evento == null)
             {
-                _logger.LogWarning("⚠️ Evento de subscrição nulo recebido");
+                _logger.LogWarning("⚠️ Evento de subscrição nulo após deserialização");
                 return;
             }
 
             _logger.LogInformation($"📨 Evento deserializado - Ação: '{evento.Acao}' | Ativo: '{evento.Ativo}' | Timestamp: {evento.Timestamp}");
+
+            // Ignorar mensagens de teste
+            if (evento.Acao.ToLower() == "test")
+            {
+                _logger.LogInformation($"🧪 Mensagem de teste recebida e ignorada para ativo: {evento.Ativo}");
+                return;
+            }
 
             switch (evento.Acao.ToLower())
             {
@@ -202,10 +286,6 @@ public class FinnhubWorker : BackgroundService
             }
 
             _logger.LogInformation($"✅ Processamento do evento concluído para {evento.Ativo}");
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError(ex, "❌ Erro de deserialização JSON: {EventoJson}", eventoJson);
         }
         catch (Exception ex)
         {
