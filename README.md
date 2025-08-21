@@ -5,51 +5,249 @@ Aplicação full-stack voltada para gerenciamento e simulação de investimentos
 ## 🛠 Tecnologias Utilizadas
 
 ### Frontend
+
 - [React](https://reactjs.org/) com [TypeScript](https://www.typescriptlang.org/)
-- [Syncfusion React UI Components](https://www.syncfusion.com/react-components)
-- Vite (em breve)
-- Axios
+- React Router DOM para navegação
+- React Toastify para notificações
+- Axios para requisições HTTP
 
 ### Backend
-- [.NET 8 (C#)](https://dotnet.microsoft.com/)
+
+- [.NET 9 (C#)](https://dotnet.microsoft.com/)
 - Apache Kafka (mensageria)
-- SQL Server e Cassandra (em breve)
+- JWT Authentication
+- In-Memory Repository (desenvolvimento)
 
 ## 📁 Estrutura do Projeto
 
 ```bash
 investsync/
-├── frontend/             # Aplicação React (TS + Syncfusion)
+├── Frontend/             # Aplicação React com TypeScript
 │   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── services/
+│   │   ├── Pages/       # Componentes de páginas
+│   │   ├── services/    # Serviços de API
+│   │   ├── assets/      # Recursos estáticos
 │   │   └── App.tsx
+│   ├── Dockerfile       # Docker para frontend
 │   └── package.json
-├── backend/              # APIs e serviços em .NET
-│   ├── InvestSync.Api/
-│   ├── InvestSync.Kafka/
-│   └── ...
-├── docker-compose.yml    # (em breve)
+├── Api/                 # API principal em .NET
+│   ├── src/
+│   │   ├── Controllers/ # Controladores da API
+│   │   ├── Models/      # Modelos de dados
+│   │   ├── Services/    # Serviços de negócio
+│   │   └── DTOs/        # Objetos de transferência
+│   └── Dockerfile       # Docker para API
+├── Backend/             # Serviços de backend
+│   ├── Worker/          # Worker para Kafka (FinnhubWorker)
+│   ├── Processor/       # Processador de eventos
+│   ├── Shared/          # Projeto compartilhado
+│   └── docker-compose.yml # Kafka setup
+├── docker-compose.yml   # Configuração completa
+├── start.sh             # Script de início (Linux/Mac)
+├── start.ps1            # Script de início (Windows)
 └── README.md
 ```
 
 ## 🚀 Como executar
 
-### Requisitos
+### Opção 1: Docker (Recomendado)
+
+#### Requisitos
+
+- Docker Desktop
+- Docker Compose
+
+#### Execução rápida
+
+**Windows (PowerShell):**
+
+```powershell
+.\start.ps1
+```
+
+**Linux/Mac:**
+
+```bash
+./start.sh
+```
+
+#### Execução manual
+
+```bash
+# Construir e iniciar todos os serviços
+docker-compose up --build -d
+
+# Verificar status
+docker-compose ps
+
+# Ver logs
+docker-compose logs -f
+
+# Parar aplicação
+docker-compose down
+```
+
+### Opção 2: Desenvolvimento local
+
+#### Requisitos
 
 - Node.js (v18+)
-- .NET SDK 8
-- Docker (para Kafka e bancos)
-- Yarn ou npm
+- .NET SDK 9
+- Docker (apenas para Kafka)
+
+#### Backend
+
+```bash
+# Iniciar Kafka
+cd Backend
+docker-compose up -d
+
+# Iniciar API
+cd ../Api
+dotnet run
+
+# Iniciar Worker (em outro terminal)
+cd ../Backend/Worker
+dotnet run
+
+# Iniciar Processor (em outro terminal)
+cd ../Backend/Processor
+dotnet run
+```
+
+#### Frontend
+
+```bash
+cd Frontend
+npm install
+npm start
+```
+
+## 🌐 Acessos
+
+Após executar a aplicação, você pode acessar:
+
+- **Frontend**: http://localhost:3000
+- **API**: http://localhost:5000
+- **Swagger**: http://localhost:5000/swagger
+- **Kafka**: localhost:9092
+
+## 🔧 Funcionalidades
+
+### ✅ Implementadas
+
+- **Autenticação JWT**: Login e registro de usuários
+- **Dashboard**: Interface principal com informações do usuário
+- **Transações**: Depósito e saque de valores
+- **Compra/Venda de Ações**: Sistema completo de investimentos
+- **Kafka Integration**: Monitoramento de preços e eventos de transações
+- **Cálculo de P&L**: Lucro/prejuízo automático nas vendas (FIFO)
+- **Notificações**: Toast notifications para feedback do usuário
+
+### 🚧 Em Desenvolvimento
+
+- **Carteira de Investimentos**: Visualização detalhada das posições
+- **Relatórios**: Análise de performance e histórico
+- **Banco de Dados**: Migração para SQL Server/PostgreSQL
+- **Testes**: Testes unitários e de integração
+
+## 📊 Arquitetura
+
+### Frontend (React + TypeScript)
+
+- **Páginas**: Login, Registro, Dashboard
+- **Serviços**: authService, transactionService
+- **Roteamento**: React Router com rotas protegidas
+- **Estado**: React Hooks para gerenciamento local
+
+### Backend (.NET 9)
+
+- **API**: RESTful com JWT Authentication
+- **Kafka**: Produção e consumo de eventos
+- **Worker**: FinnhubWorker para dados de mercado
+- **Processor**: Processamento de eventos de transações
+- **Repositórios**: In-Memory (desenvolvimento)
+- **Serviços**: StockPriceSubscription, TransactionProducer
+
+### Infraestrutura
+
+- **Kafka**: Mensageria para eventos de preços e transações
+- **Docker**: Containerização completa
+- **Health Checks**: Monitoramento de saúde dos serviços
+
+## 🛠 Comandos Úteis
+
+```bash
+# Ver logs de um serviço específico
+docker-compose logs -f api
+docker-compose logs -f frontend
+docker-compose logs -f kafka
+docker-compose logs -f worker
+docker-compose logs -f processor
+
+# Reconstruir um serviço específico
+docker-compose up --build api
+
+# Parar apenas um serviço
+docker-compose stop frontend
+
+# Remover todos os containers e volumes
+docker-compose down -v
+
+# Acessar container em execução
+docker exec -it investsync-api bash
+```
+
+## 🐛 Troubleshooting
+
+### Kafka não inicia
+
+```bash
+# Limpar volumes do Kafka
+docker-compose down -v
+docker-compose up kafka -d
+```
+
+### Erro de build no Frontend
+
+```bash
+# Limpar cache do npm
+cd Frontend
+npm cache clean --force
+npm install
+```
+
+### API não conecta no Kafka
+
+- Verificar se o Kafka está rodando: `docker-compose ps`
+- Verificar logs do Kafka: `docker-compose logs kafka`
+
+## 📝 Variáveis de Ambiente
+
+### API
+
+- `JWT_KEY`: Chave secreta para JWT
+- `JWT_ISSUER`: Emissor do JWT
+- `ASPNETCORE_ENVIRONMENT`: Ambiente de execução
 
 ### Frontend
 
-```bash
-cd frontend
-npm install
+- `REACT_APP_API_URL`: URL da API backend
+
+## 🤝 Contribuição
+
+1. Fork o projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 npm run dev
-```
+
+````
 
 Acesse em: [http://localhost:5173](http://localhost:5173)
 
@@ -58,7 +256,7 @@ Acesse em: [http://localhost:5173](http://localhost:5173)
 ```bash
 cd backend/InvestSync.Api
 dotnet run
-```
+````
 
 Acesse a API em: [https://localhost:5001](https://localhost:5001)
 
