@@ -33,9 +33,10 @@ namespace InvestSync.Api.src.Controllers
 
                 _logger.LogInformation("📞 Chamando PublishEvents.PublishSubscriptionEvent...");
 
+                var kafkaServers = Environment.GetEnvironmentVariable("Kafka__BootstrapServers") ?? "localhost:9092";
                 var config = new ProducerConfig
                 {
-                    BootstrapServers = "localhost:9092",
+                    BootstrapServers = kafkaServers,
                     MessageTimeoutMs = 5000,
                     RequestTimeoutMs = 5000,
                     DeliveryReportFields = "all"
@@ -75,9 +76,10 @@ namespace InvestSync.Api.src.Controllers
 
                 _logger.LogInformation("📞 Chamando PublishEvents.PublishSubscriptionEvent...");
 
+                var kafkaServers = Environment.GetEnvironmentVariable("Kafka__BootstrapServers") ?? "localhost:9092";
                 var config = new ProducerConfig
                 {
-                    BootstrapServers = "localhost:9092",
+                    BootstrapServers = kafkaServers,
                     MessageTimeoutMs = 5000,
                     RequestTimeoutMs = 5000,
                     DeliveryReportFields = "all"

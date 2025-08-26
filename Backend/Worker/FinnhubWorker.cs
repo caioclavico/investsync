@@ -49,9 +49,10 @@ public class FinnhubWorker : BackgroundService
     {
         _logger.LogInformation("🎭 Iniciando geração de dados mock...");
 
+        var kafkaServers = Environment.GetEnvironmentVariable("Kafka__BootstrapServers") ?? "localhost:9092";
         var config = new ProducerConfig
         {
-            BootstrapServers = "localhost:9092"
+            BootstrapServers = kafkaServers
         };
 
         using var producer = new ProducerBuilder<string, string>(config).Build();
@@ -93,13 +94,14 @@ public class FinnhubWorker : BackgroundService
             ReconnectTimeout = TimeSpan.FromSeconds(30)
         };
 
-        var producerConfig = new ProducerConfig { BootstrapServers = "localhost:9092" };
+        var kafkaServers = Environment.GetEnvironmentVariable("Kafka__BootstrapServers") ?? "localhost:9092";
+        var producerConfig = new ProducerConfig { BootstrapServers = kafkaServers };
         using var producer = new ProducerBuilder<string, string>(producerConfig).Build();
 
         var consumerConfig = new ConsumerConfig
         {
             GroupId = "finnhub-worker-group",
-            BootstrapServers = "localhost:9092",
+            BootstrapServers = kafkaServers,
             AutoOffsetReset = AutoOffsetReset.Earliest,
             EnableAutoCommit = false,
             SessionTimeoutMs = 10000,

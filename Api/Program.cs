@@ -3,6 +3,7 @@ using InvestSync.Api.src.Interfaces;
 using InvestSync.Api.src.Repositories;
 using InvestSync.Api.src.Extensions;
 using InvestSync.Api.src.BO;
+using InvestSync.Api.src.Middleware;
 
 // Carrega variáveis do .env
 DotNetEnv.Env.Load();
@@ -21,14 +22,15 @@ builder.Services.AddJwtAuthentication(jwtKey, jwtIssuer);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerWithJwt();
 
-// Configuração do CORS para permitir o frontend React
+// Configuração do CORS para permitir o frontend React e WebSocket
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
         policy.WithOrigins("http://localhost:3000")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials(); // Necessário para WebSocket
     });
 });
 
@@ -42,6 +44,13 @@ if (app.Environment.IsDevelopment())
 
 // Habilitar CORS
 app.UseCors();
+
+// Configurar WebSockets
+app.UseWebSockets(new WebSocketOptions()
+{
+    KeepAliveInterval = TimeSpan.FromMinutes(2),
+});
+app.UseMiddleware<StockPriceWebSocketMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();

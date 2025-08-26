@@ -13,9 +13,10 @@ public class Worker : BackgroundService
     {
         return Task.Run(() =>
         {
+            var kafkaServers = Environment.GetEnvironmentVariable("Kafka__BootstrapServers") ?? "localhost:9092";
             var config = new ConsumerConfig
             {
-                BootstrapServers = "localhost:9092",
+                BootstrapServers = kafkaServers,
                 GroupId = "investsync-processor",
                 AutoOffsetReset = AutoOffsetReset.Earliest
             };
